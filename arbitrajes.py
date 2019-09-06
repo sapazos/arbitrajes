@@ -1,7 +1,6 @@
 # para ejecutar se necesita python3 y los import (pandas)
 # pandas se utiliza para exportar los resultados a un csv, si no lo quieren hacer quiten el import pandas y la ultima línea del codigo
 # lo ejecutamos así: python3 arbitrajes.py
-
 # le doy el credito a facundo https://github.com/facundo-bogado/cursoTA y sus videos en youtube que me ayudaron a empezar con la api de IOL
 
 import requests

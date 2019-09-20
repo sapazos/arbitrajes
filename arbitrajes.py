@@ -1,7 +1,6 @@
 # para ejecutar se necesita python3 y los import (pandas)
 # pandas se utiliza para exportar los resultados a un csv, si no lo quieren hacer quiten el import pandas y la ultima línea del codigo
 # lo ejecutamos así: python3 arbitrajes.py
-# le doy el credito a facundo https://github.com/facundo-bogado/cursoTA y sus videos en youtube que me ayudaron a empezar con la api de IOL
 
 import requests
 import json
@@ -41,6 +40,8 @@ for simbolo in tickers:
     }).json()
     # me da las 5 puntas, solo voy a consultar la primera
     puntas = datos['puntas']
+    if len(puntas) == 0:
+        continue
     precioP = puntas[0]['precioVenta']  # precio de venta en pesos
     # consulto el tiker en dolares +D
     url_pedido = "https://api.invertironline.com/api/v2/bCBA/Titulos/"+simbolo+"D/Cotizacion"
@@ -48,6 +49,8 @@ for simbolo in tickers:
         "Authorization":"Bearer " + access_token
     }).json()
     puntas = datos['puntas']
+    if len(puntas) == 0:
+        continue
     precioD = puntas[0]['precioCompra']  # precio de compra en dolares
     # Nunca dividir por cero!
     if precioD > 0:

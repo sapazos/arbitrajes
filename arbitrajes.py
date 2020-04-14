@@ -5,59 +5,44 @@
 import requests
 import json
 import pandas
-import getpass
+from AutenticarIO import AutenticarIO
 
-def pedir_token(data):
-    url_token = "https://api.invertironline.com/token"
-    respuesta = requests.post(url=url_token, data=data)
-    return json.loads(respuesta.text)
+url_general = "https://api.invertironline.com/api/v2/Cotizaciones/bonos/Soberanos en dólares/argentina"
 
-# Ingresa por consola el nombre y clave del broker
-usuario = input("Ingresar el usuario: ")
-password = getpass.getpass("Ingresar la clave: ")
-data = {
-    "username":usuario,
-    "password":password,
-    "grant_type":"password"
-}
-#llamo a la funcion que hace login y devuelve el token
-datos_token = pedir_token(data)
-access_token = datos_token['access_token']      #token para acceder
-refresh_token = datos_token['refresh_token']    #token para refrescar, no lo uso en este script
+def obtener_datos(tipo, url_pedido, access_token, tickers):
+    dic = dict()
+    datos = requests.get(url=url_pedido, headers={
+        "Authorization":"Bearer " + access_token
+    }).json()
+    for titulo in datos['titulos']:
+        for tick in tickers:
+            i = 'D' if tipo == 'dolares' else ''
+            if titulo['simbolo'] == tick+i:
+                dic[titulo['simbolo']] = titulo['ultimoPrecio']
+    return dic
 
-# lista de ticker de bonos o acciones que quiero consultar
+#Utilizamos la clase para autenticar a la API
+autenticar = AutenticarIO()
+autenticar.conexion()
+access_token = autenticar.get_access_token()
+
+# lista de ticker de bonos que quiero consultar
 tickers = ['A2E2','A2E7','AA25','AA37','AC17','AO20','AY24','DICA','DICY','PARA','PARY']
 # defino listas que voy a utilizar para la salida csv
 listaNombre = []
 listaValor = []
 preplanilla = {}
+
+dic_p = dict()
+dic_p = obtener_datos('pesos', url_general, access_token, tickers)
+dic_d = dict()
+dic_d = obtener_datos('dolares', url_general, access_token, tickers)
+
 # para cada ticker de la lista pido su cotizacion
 for simbolo in tickers:
-    # consulto el ticker en pesos
-    url_pedido = "https://api.invertironline.com/api/v2/bCBA/Titulos/"+simbolo+"/Cotizacion"
-    datos = requests.get(url=url_pedido, headers={
-        "Authorization":"Bearer " + access_token
-    }).json()
-    # me da las 5 puntas, solo voy a consultar la primera
-    puntas = datos['puntas']
-    if len(puntas) == 0:
-        continue
-    precioP = puntas[0]['precioVenta']  # precio de venta en pesos
-    # consulto el tiker en dolares +D
-    url_pedido = "https://api.invertironline.com/api/v2/bCBA/Titulos/"+simbolo+"D/Cotizacion"
-    datos = requests.get(url=url_pedido, headers={
-        "Authorization":"Bearer " + access_token
-    }).json()
-    puntas = datos['puntas']
-    if len(puntas) == 0:
-        continue
-    precioD = puntas[0]['precioCompra']  # precio de compra en dolares
-    # Nunca dividir por cero!
-    if precioD > 0:
-        dolar = round(float(precioP / precioD),2)   # redondeo y muestro la cotizacion con dos decimales
-    else:
-        dolar = 0
-    print (str(simbolo+'D') + ': ' + str(dolar))
+    precio_p = dic_p[simbolo]
+    precio_d = dic_d[simbolo+'D']
+    dolar = round(float(precio_p / precio_d),2)   # redondeo y muestro la cotizacion con dos decimales
     listaNombre.append(simbolo+'D')
     listaValor.append(dolar)
 
@@ -65,5 +50,6 @@ for simbolo in tickers:
 preplanilla["TICKER"] = listaNombre
 preplanilla["VALOR"] = listaValor
 planilla = pandas.DataFrame(preplanilla, columns=["TICKER","VALOR"])
+print (planilla)
 # no quiero el csv por ahora, lo dejo comentado
 #planilla.to_csv('arbitrajes.csv', index=False)

@@ -1,7 +1,9 @@
 # para ejecutar se necesita python3
-# lo ejecutamos así: python3 arbitrajesADR.py [valor de CCL como parametro]
+# lo ejecutamos así: python3 arbitrajesADR.py
+# podemos pasar el usuario y contraseña por parametro asi: python3 arbitrajesADR.py -u usuario -p password
+# podemos pasarle un valor de CCL y que use ese en lugar de calcularlo: python3 arbitrajesADR.py -c 88.50
 
-import sys                              # para utilizar los parametros de entrada
+import argparse
 import requests                         # para la API
 import json                             # para la API
 import pandas                           # necesaria para armar la grilla que se imprime
@@ -9,6 +11,7 @@ from AutenticarIO import AutenticarIO   # clase para autenticar a la API de IOL
 
 url_general = "https://api.invertironline.com/api/v2/Cotizaciones/acciones/Panel General/argentina"
 url_adr = "https://api.invertironline.com/api/v2/Cotizaciones/adrs/argentina/estados_Unidos"
+url_bonos = "https://api.invertironline.com/api/v2/Cotizaciones/bonos/Soberanos en dólares/argentina"
 #url_paneles = "https://api.invertironline.com/api/v2/argentina/Titulos/Cotizacion/Paneles/Acciones"
 
 # funcion que hace el pedido get a la api, le paso por parametro tipo para diferenciar si es del panel general o ADR
@@ -22,23 +25,46 @@ def obtener_datos(tipo, url_pedido, access_token, tickers):
     }).json()
     for dat in datos['titulos']:
         for tick in tickers:
-            i = 1 if tipo == 'general' else 0
-            if dat['simbolo'] == tick[i]:
+            if tipo == 'general' and dat['simbolo'] == tick[1]:
+                dic[dat['simbolo']] = dat['ultimoPrecio']
+            if tipo == 'adr' and dat['simbolo'] == tick[0]:
+                dic[dat['simbolo']] = dat['ultimoPrecio']
+            if tipo == 'dolares' and dat['simbolo'] == tick+'D':
+                dic[dat['simbolo']] = dat['ultimoPrecio']
+            if tipo == 'pesos' and dat['simbolo'] == tick:
                 dic[dat['simbolo']] = dat['ultimoPrecio']
     return dic
 
+ccl_promedio = ''
+user = ''
+password = ''
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--ccl", help="Valor de CCL fijo para calcular arbitrajes")
+parser.add_argument("-u", "--user", help="Nombre de usuario de la API")
+parser.add_argument("-p", "--password", help="Contraseña de usuario de la API")
+args = parser.parse_args()
+if args.ccl:
+    ccl_promedio = float(args.ccl)
+if args.user:
+    user = args.user
+if args.password:
+    password = args.password
+
 # utilizo la clase autenticar para obtener el token para comunicarme con la API
 autenticar = AutenticarIO()
-autenticar.conexion()
+try:
+    autenticar.conexion(user, password)
+except:
+    print('Error de usuario o contraseña')
+    exit()
 access_token = autenticar.get_access_token()
+
 # lista de ticker de acciones que quiero consultar
 tickers = [('TEO','TECO2',5),('CEPU','CEPU',10),('GGAL','GGAL',10),('PAM','PAMP',25),
      ('TGS','TGSU2',5),('YPF','YPFD',1),('EDN','EDN',20),('BMA','BMA',10),('SUPV','SUPV',5),
      ('BBAR','BBAR',3),('LOMA','LOMA',5),('CRESY','CRES',10),('IRS','IRSA',10),('IRCP','IRCP',4)]
+tickers_bonos = ['A2E2','A2E7','AA25','AA37','AC17','AO20','AY24','DICA','DICY','PARA','PARY']
 # defino listas que voy a utilizar para la salida csv
-lista_nombre = []
-lista_pesos = []
-lista_dolares = []
 lista_ccl = []
 lista_datos = []
 diccionario_arg = dict()
@@ -47,12 +73,8 @@ diccionario_adr = dict()
 # llamo a la funcion para que obtenga los datos de la API, para mercado arg y para los ADR
 diccionario_arg = obtener_datos('general', url_general, access_token, tickers)
 diccionario_adr = obtener_datos('adr', url_adr, access_token, tickers)
-
-# consulto la lista de parametros, si no hay ninguno, calculo el CCL actual
-# si viene el valor por parametro lo utilizo
-if len(sys.argv) > 1:
-    ccl_promedio = float(sys.argv[1])
-else:
+# si el valor de CCL NO viene por parametro lo calculo
+if ccl_promedio == '':
     # calculo el ccl de las acciones que estan en la lista
     for simbolo in tickers:
         #if simbolo[0] in ('PAM','GGAL','BMA','YPF','TGS','TEO','CEPU','EDN','SUPV','BBAR','LOMA','CRESY','IRSA','IRCP'):
@@ -88,8 +110,31 @@ for simbolo in tickers:
 planilla = pandas.DataFrame(lista_datos, columns=["TICKER","VALOR ARG","VALOR ADR","CCL","FACTOR","ARBITRADO","DIFERENCIA","PORCENTAJE"])
 print ("CCL promedio: " + str(round(ccl_promedio,2)))
 # ordeno la planilla por el nombre del ticker y reseteo el index
-planilla = planilla.sort_values('TICKER')
+planilla = planilla.sort_values('PORCENTAJE')
 planilla = planilla.reset_index(drop=True)
 print(planilla)
 # no quiero el csv por ahora, lo dejo comentado
-#planilla.to_csv('arbitrajes.csv', index=False)
+# planilla.to_csv('arbitrajes.csv', index=False)
+
+lista_nombre = []
+lista_mep = []
+lista_datos = []
+dic_p = dict()
+dic_d = dict()
+
+dic_p = obtener_datos('pesos', url_bonos, access_token, tickers_bonos)
+dic_d = obtener_datos('dolares', url_bonos, access_token, tickers_bonos)
+# para cada ticker de la lista pido su cotizacion
+for simbolo in tickers_bonos:
+    precio_p = dic_p[simbolo]
+    precio_d = dic_d[simbolo+'D']
+    dolar = round(float(precio_p / precio_d),2)     # redondeo y muestro la cotizacion con dos decimales
+    lista_mep.append(dolar)
+    lista_ticker = []
+    lista_ticker.append(simbolo+'D')
+    lista_ticker.append(dolar)
+    lista_datos.append(lista_ticker)
+mep_promedio = (sum(lista_mep)/len(lista_mep))      # obtengo el CCL promedio
+print('MEP promedio: ' + str(round(mep_promedio,2)))
+planilla = pandas.DataFrame(lista_datos, columns=["TICKER","MEP"])
+print(planilla)

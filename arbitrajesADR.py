@@ -4,8 +4,8 @@
 # podemos pasarle un valor de CCL y que use ese en lugar de calcularlo: python3 arbitrajesADR.py -c 88.50
 
 import argparse
+import json                             # para leer el file de login por parametro
 import requests                         # para la API
-import json                             # para la API
 import pandas                           # necesaria para armar la grilla que se imprime
 from AutenticarIO import AutenticarIO   # clase para autenticar a la API de IOL
 
@@ -40,11 +40,19 @@ user = ''
 password = ''
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--ccl", help="Valor de CCL fijo para calcular arbitrajes")
+parser.add_argument("-f", "--file", help="ruta de archivo para login")
 parser.add_argument("-u", "--user", help="Nombre de usuario de la API")
 parser.add_argument("-p", "--password", help="Contraseña de usuario de la API")
 args = parser.parse_args()
 if args.ccl:
     ccl_promedio = float(args.ccl)
+if args.file:
+    archivo = args.file
+    with open(archivo) as file:
+        data = json.load(file)
+        for datos in data['credenciales']:
+            user = datos['user']
+            password = datos['password']
 if args.user:
     user = args.user
 if args.password:
@@ -63,7 +71,7 @@ access_token = autenticar.get_access_token()
 tickers = [('TEO','TECO2',5),('CEPU','CEPU',10),('GGAL','GGAL',10),('PAM','PAMP',25),
      ('TGS','TGSU2',5),('YPF','YPFD',1),('EDN','EDN',20),('BMA','BMA',10),('SUPV','SUPV',5),
      ('BBAR','BBAR',3),('LOMA','LOMA',5),('CRESY','CRES',10),('IRS','IRSA',10),('IRCP','IRCP',4)]
-tickers_bonos = ['A2E2','A2E7','AA25','AA37','AC17','AO20','AY24','DICA','DICY','PARA','PARY']
+tickers_bonos = ['AA21','AA25','AA37','AA46','AL29','AL30','AL35','AL41','A2E8','AE38','GD29','GD30','GD35','GD38','GD41','GD46','AO20','AY24','DICA','PARA']
 # defino listas que voy a utilizar para la salida csv
 lista_ccl = []
 lista_datos = []

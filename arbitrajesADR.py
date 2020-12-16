@@ -10,6 +10,7 @@ import pandas                           # necesaria para armar la grilla que se 
 from AutenticarIO import AutenticarIO   # clase para autenticar a la API de IOL
 
 url_general = "https://api.invertironline.com/api/v2/Cotizaciones/acciones/Panel General/argentina"
+url_merval = "https://api.invertironline.com/api/v2/Cotizaciones/acciones/merval/argentina"
 url_adr = "https://api.invertironline.com/api/v2/Cotizaciones/adrs/argentina/estados_Unidos"
 url_bonos = "https://api.invertironline.com/api/v2/Cotizaciones/bonos/Soberanos en dólares/argentina"
 #url_paneles = "https://api.invertironline.com/api/v2/argentina/Titulos/Cotizacion/Paneles/Acciones"
@@ -68,18 +69,22 @@ except:
 access_token = autenticar.get_access_token()
 
 # lista de ticker de acciones que quiero consultar
+# ('LOMA','LOMA',5),
 tickers = [('TEO','TECO2',5),('CEPU','CEPU',10),('GGAL','GGAL',10),('PAM','PAMP',25),
      ('TGS','TGSU2',5),('YPF','YPFD',1),('EDN','EDN',20),('BMA','BMA',10),('SUPV','SUPV',5),
-     ('BBAR','BBAR',3),('LOMA','LOMA',5),('CRESY','CRES',10),('IRS','IRSA',10),('IRCP','IRCP',4)]
+     ('BBAR','BBAR',3),('CRESY','CRES',10),('IRS','IRSA',10),('IRCP','IRCP',4)]
 tickers_bonos = ['AA21','AA25','AA37','AA46','AL29','AL30','AL35','AL41','A2E8','AE38','GD29','GD30','GD35','GD38','GD41','GD46','AO20','AY24','DICA','PARA']
 # defino listas que voy a utilizar para la salida csv
 lista_ccl = []
 lista_datos = []
 diccionario_arg = dict()
+diccionario_arg_g = dict()
 diccionario_adr = dict()
 
 # llamo a la funcion para que obtenga los datos de la API, para mercado arg y para los ADR
-diccionario_arg = obtener_datos('general', url_general, access_token, tickers)
+diccionario_arg = obtener_datos('general', url_merval, access_token, tickers)
+diccionario_arg_g = obtener_datos('general', url_general, access_token, tickers)
+diccionario_arg.update(diccionario_arg_g)
 diccionario_adr = obtener_datos('adr', url_adr, access_token, tickers)
 # si el valor de CCL NO viene por parametro lo calculo
 if ccl_promedio == '':
@@ -142,7 +147,7 @@ for simbolo in tickers_bonos:
     lista_ticker.append(simbolo+'D')
     lista_ticker.append(dolar)
     lista_datos.append(lista_ticker)
-mep_promedio = (sum(lista_mep)/len(lista_mep))      # obtengo el CCL promedio
-print('MEP promedio: ' + str(round(mep_promedio,2)))
+# mep_promedio = (sum(lista_mep)/len(lista_mep))      # obtengo el MEP promedio
+# print('MEP promedio: ' + str(round(mep_promedio,2)))
 planilla = pandas.DataFrame(lista_datos, columns=["TICKER","MEP"])
 print(planilla)

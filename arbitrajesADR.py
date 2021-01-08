@@ -15,6 +15,7 @@ url_adr = "https://api.invertironline.com/api/v2/Cotizaciones/adrs/argentina/est
 url_bonos = "https://api.invertironline.com/api/v2/Cotizaciones/bonos/Soberanos en dólares/argentina"
 url_cedears = "https://api.invertironline.com/api/v2/Cotizaciones/Acciones/CEDEARs/Argentina"
 url_sp500 = "https://api.invertironline.com/api/v2/Cotizaciones/Acciones/SP500/Estados_Unidos"
+url_nasdaq = "https://api.invertironline.com/api/v2/Cotizaciones/Acciones/Nasdaq 100/Estados_Unidos"
 #url_paneles = "https://api.invertironline.com/api/v2/argentina/Titulos/Cotizacion/Paneles/Acciones"
 
 # --------------------------------------------------------------------------------------------------------------------------
@@ -115,7 +116,8 @@ tickers_acciones = [('TEO','TECO2',5),('CEPU','CEPU',10),('GGAL','GGAL',10),('PA
 tickers_bonos = [('AL29D','AL29','AL29C'),('AL30D','AL30','AL30C'),('AL35D','AL35','AL35C'),
                 ('AL41D','AL41','AL41C'),('AE38D','AE38','AE38C'),('GD29D','GD29','GD29C'),('GD30D','GD30','GD30C'),
                 ('GD35D','GD35','GD35C'),('GD38D','GD38','GD38C'),('GD41D','GD41','GD41C'),('GD46D','GD46','GD46C')]
-tickers_cedears = [('KO','KO',5),('MSFT','MSFT',10),('AAPL','AAPL',10),('AMZN','AMZN',144),('DIS','DISN',4)]
+tickers_cedears = [('KO','KO',5),('MSFT','MSFT',10),('AAPL','AAPL',10),('AMZN','AMZN',144),('DIS','DISN',4),
+                ('MELI','MELI',60),('TSLA','TSLA',15)]
 
 # llamo a la funcion para que obtenga los datos de la API, para mercado arg y para los ADR
 diccionario_merval = obtener_datos('segundo', url_merval, access_token, tickers_acciones)
@@ -152,6 +154,8 @@ print(planilla)
 
 diccionario_cedears = obtener_datos('segundo', url_cedears, access_token, tickers_cedears)
 diccionario_sp500 = obtener_datos('primero', url_sp500, access_token, tickers_cedears)
+diccionario_nasdaq = obtener_datos('primero', url_nasdaq, access_token, tickers_cedears)
+diccionario_sp500.update(diccionario_nasdaq)
 lista_datos = calcular_arbitraje(tickers_cedears, diccionario_cedears, diccionario_sp500, '')
 # armo la estructura que uso para el csv
 planilla = pandas.DataFrame(lista_datos, columns=["TICKER","VALOR CEDEAR","VALOR USA","FACTOR","ARBITRADO","DIFERENCIA","PORCENTAJE","CCL"])
